@@ -10,7 +10,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const USERS_FILE = path.join(__dirname, 'users.json'); // ✅ Đường dẫn tuyệt đối
-const SECRET_KEY = process.env.SECRET_KEY || 'your-secret-key';
+const SECRET_KEY = process.env.SECRET_KEY || 'Taeyang@1998';
 
 console.log('📁 Ghi/đọc file tại:', USERS_FILE);
 
@@ -56,7 +56,8 @@ const publicPaths = [
   '/api/login',
   '/api/register',
   '/api/ticker',
-  '/api/klines'
+  '/api/klines',
+  '/index.html'
 ];
 
 // Áp dụng kiểm tra token cho các route cần bảo vệ
