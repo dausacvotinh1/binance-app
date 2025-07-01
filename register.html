@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Đăng ký - Tool Binance</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #0ef;
+      text-shadow: 0 0 10px #0ef;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      background-color: #121212;
+      color: #eee;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      opacity: 0.06;
+      pointer-events: none;
+    }
+
+    .register-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e1e2f;
+      padding: 40px 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #0ef7;
+      z-index: 1;
+      width: 320px;
+      color: #eee;
+      text-align: center;
+    }
+
+    .register-container h2 {
+      margin-bottom: 24px;
+      color: #0ef;
+      text-shadow: 0 0 8px #0ef;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #222;
+      color: #eee;
+      box-shadow: inset 0 0 5px #0ef;
+    }
+
+    input:focus {
+      outline: none;
+      background-color: #333;
+      box-shadow: 0 0 10px #0ef;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #0ef;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #0ef;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #0af;
+      color: #fff;
+      box-shadow: 0 0 15px #0af;
+    }
+
+    .error {
+      color: #ff4c4c;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    a {
+      color: #0ef;
+      text-decoration: none;
+      display: block;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h2>$ Không Short, Không Long, Đời Không Nể $<br>Không Cháy Vài Lần Khó Thành Công</h2>
+  <canvas id="candlestickCanvas"></canvas>
+
+  <div class="register-container">
+    <h2>Đăng ký</h2>
+    <div class="error" id="registerError">Lỗi nhập liệu</div>
+    <input type="text" id="username" placeholder="Tên đăng nhập" autocomplete="username" />
+    <input type="password" id="password" placeholder="Mật khẩu" autocomplete="new-password" />
+    <input type="password" id="password2" placeholder="Nhập lại mật khẩu" autocomplete="new-password" />
+    <button id="registerBtn">Đăng ký</button>
+    <a href="login.html">Đã có tài khoản? Đăng nhập</a>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("candlestickCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    const candleWidth = 8;
+    const gap = 3;
+    const totalCandles = Math.ceil(width / (candleWidth + gap)) + 10;
+
+    let candles = [];
+    let price = 100;
+
+    function generateInitialCandles() {
+      let lastClose = price;
+      for (let i = 0; i < totalCandles; i++) {
+        const open = lastClose;
+        const close = open + (Math.random() - 0.5) * 10;
+        const high = Math.max(open, close) + Math.random() * 2;
+        const low = Math.min(open, close) - Math.random() * 2;
+        candles.push({ open, close, high, low });
+        lastClose = close;
+      }
+    }
+
+    function addNewCandle() {
+      const last = candles[candles.length - 1];
+      const open = last.close;
+      const close = open + (Math.random() - 0.5) * 10;
+      const high = Math.max(open, close) + Math.random() * 2;
+      const low = Math.min(open, close) - Math.random() * 2;
+      candles.push({ open, close, high, low });
+      if (candles.length > totalCandles) candles.shift();
+    }
+
+    function drawCandles() {
+      ctx.clearRect(0, 0, width, height);
+
+      const maxPrice = Math.max(...candles.map(c => c.high));
+      const minPrice = Math.min(...candles.map(c => c.low));
+      const priceRange = maxPrice - minPrice;
+
+      for (let i = 0; i < candles.length; i++) {
+        const candle = candles[i];
+        const x = i * (candleWidth + gap);
+        const openY = height - ((candle.open - minPrice) / priceRange) * height;
+        const closeY = height - ((candle.close - minPrice) / priceRange) * height;
+        const highY = height - ((candle.high - minPrice) / priceRange) * height;
+        const lowY = height - ((candle.low - minPrice) / priceRange) * height;
+
+        const color = candle.close >= candle.open ? "#0f0" : "#f00";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x + candleWidth / 2, highY);
+        ctx.lineTo(x + candleWidth / 2, lowY);
+        ctx.stroke();
+
+        ctx.fillStyle = color;
+        ctx.fillRect(
+          x,
+          Math.min(openY, closeY),
+          candleWidth,
+          Math.abs(closeY - openY)
+        );
+      }
+    }
+
+    let lastUpdate = Date.now();
+    function animate() {
+      const now = Date.now();
+      if (now - lastUpdate > 800) {
+        addNewCandle();
+        lastUpdate = now;
+      }
+
+      drawCandles();
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener("resize", () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    });
+
+    generateInitialCandles();
+    animate();
+  </script>
+  <script>
+  const registerBtn = document.getElementById("registerBtn");
+  const registerError = document.getElementById("registerError");
+
+  const LS_USERS_KEY = 'binance_tool_users';
+
+  function getUsers() {
+    try {
+      return JSON.parse(localStorage.getItem(LS_USERS_KEY)) || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveUsers(users) {
+    localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
+  }
+
+  function validateUsername(username) {
+    return /^[a-zA-Z0-9]{3,20}$/.test(username);
+  }
+
+  function validatePassword(password) {
+    return password.length >= 6;
+  }
+
+  function showError(msg) {
+    registerError.textContent = msg;
+    registerError.style.display = "block";
+  }
+
+  registerBtn.onclick = () => {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+    const password2 = document.getElementById("password2").value;
+
+    registerError.style.display = "none";
+
+    if (!validateUsername(username)) {
+      showError("Tên đăng nhập phải từ 3-20 ký tự chữ/số.");
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      showError("Mật khẩu phải từ 6 ký tự trở lên.");
+      return;
+    }
+
+    if (password !== password2) {
+      showError("Mật khẩu nhập lại không khớp.");
+      return;
+    }
+
+    let users = getUsers();
+    if (users[username]) {
+      showError("Tên đăng nhập đã tồn tại.");
+      return;
+    }
+
+    users[username] = password;
+    saveUsers(users);
+
+    alert("Đăng ký thành công! Vui lòng đăng nhập.");
+    window.location.href = "login.html";
+  };
+</script>
+
+</body>
+</html>

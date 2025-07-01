@@ -1,0 +1,1116 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Tool Hack Tiền Binance</title>
+
+<!-- regenerator-runtime để fix lỗi async/await -->
+<script src="https://cdn.jsdelivr.net/npm/regenerator-runtime@0.13.11/runtime.min.js"></script>
+
+<!-- Load technicalindicators chỉ 1 lần -->
+<script src="https://cdn.jsdelivr.net/npm/technicalindicators@3.1.0/dist/browser.js"></script>
+
+<style>
+/* Giao diện Dark mode chuyên trading style */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 20px;
+  background: #121212;
+  color: #eee;
+  position: relative;
+  z-index: 1;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at bottom, #0ef2 0%, transparent 70%),
+              url('https://www.transparenttextures.com/patterns/cubes.png');
+  background-size: 1000px 1000px;
+  z-index: 0;
+  opacity: 0.08;
+  animation: waveMove 30s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes waveMove {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-50%, -50%); }
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #0ef;
+  text-shadow: 0 0 10px #0ef;
+}
+
+select, input[type=text] {
+  padding: 8px 12px;
+  font-size: 16px;
+  margin-right: 12px;
+  border-radius: 6px;
+  border: none;
+  outline: none;
+  background-color: #222;
+  color: #eee;
+  box-shadow: inset 0 0 5px #0ef;
+  transition: 0.3s;
+}
+
+select:hover, input[type=text]:hover, select:focus, input[type=text]:focus {
+  background-color: #333;
+  box-shadow: 0 0 10px #0ef;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 15px;
+  background-color: #1e1e2f;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 15px #0ef7;
+}
+
+th, td {
+  border: none;
+  text-align: center;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+
+th {
+  background: linear-gradient(90deg, #0ef, #0af);
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s ease;
+}
+
+th:hover {
+  background: linear-gradient(90deg, #14f, #07c);
+}
+
+tr {
+  transition: background-color 0.25s ease;
+  border-bottom: 1px solid #222;
+}
+
+tr:hover {
+  background-color: #0e1425;
+  cursor: pointer;
+}
+
+td {
+  font-weight: 500;
+  color: #ccc;
+}
+
+.col-entryPrice {
+  background: #0a234a;
+  color: #7fdfff;
+  font-weight: 700;
+}
+
+.col-TP {
+  background: #0a3a0a;
+  color: #7fff7f;
+  font-weight: 700;
+}
+
+.col-SL {
+  background: #4a0a0a;
+  color: #ff7979;
+  font-weight: 700;
+}
+
+.col-profitPercent {
+  background: #144d14;
+  color: #32cd32;
+  font-weight: 700;
+}
+
+.col-lossPercent {
+  background: #4d1414;
+  color: #ff4c4c;
+  font-weight: 700;
+}
+
+#loading {
+  font-weight: bold;
+  margin-top: 10px;
+  color: #0ef;
+  text-align: center;
+  font-size: 18px;
+  text-shadow: 0 0 10px #0ef;
+}
+
+#searchInput {
+  width: 240px;
+}
+
+.loading-cell {
+  color: #666;
+  font-style: italic;
+}
+
+/* Scrollbar cho table đẹp hơn */
+tbody {
+  max-height: 500px;
+  overflow-y: auto;
+  display: block;
+}
+
+thead, tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+tbody tr:hover {
+  background-color: #15253b !important;
+}
+
+/* Màu cho Win Rate theo từng mức */
+.winrate-high { color: #0f9d58; font-weight: 700; }    /* Xanh đậm > 70% */
+.winrate-mid { color: #f4b400; font-weight: 700; }     /* Vàng 50-70% */
+.winrate-low { color: #db4437; font-weight: 700; }     /* Đỏ < 50% */
+
+/* Màu cho % thay đổi giá */
+.price-change-up {
+  color: #32cd32; /* xanh lá sáng */
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.price-change-down {
+  color: #ff4c4c; /* đỏ */
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+</style>
+
+</head>
+<body>
+<canvas id="candlestickOverlay"></canvas>
+<style>
+#candlestickOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10; /* nằm trên bảng */
+  opacity: 0.05; /* mờ nhẹ */
+  pointer-events: none; /* không ảnh hưởng tới click */
+}
+</style>
+
+<h2>$ Không Short, Không Long, Đời Không Nể $<br>Không Cháy Vài Lần Khó Thành Công</h2>
+
+<select id="positionSelect">
+  <option value="long">Long</option>
+  <option value="short">Short</option>
+</select>
+
+<input type="text" id="searchInput" placeholder="Tìm kiếm cặp USDT..." />
+<button onclick="location.reload()" class="neon-btn">🔄 Reload Trang</button>
+
+<style>
+  .neon-btn {
+    background-color: #1e1e2f;         /* nền tím đậm */
+    color: #0ef7;                    /* màu chữ neon xanh */
+    border: 2px solid #0ef7;         /* viền neon xanh */
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px #0ef7, 0 0 20px #0ef7 inset;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  .neon-btn:hover {
+    background-color: #0ef7f7;         /* nền chuyển sáng */
+    color: #1e1e2f;                    /* chữ tối lại cho tương phản */
+    box-shadow: 0 0 15px #0ef7f7, 0 0 25px #0ef7f7;
+    transform: scale(1.05);
+  }
+
+  .neon-btn:active {
+    transform: scale(0.97);
+    box-shadow: 0 0 5px #0ef7f7;
+  }
+</style>
+
+
+<div id="loading">Đợi tí đi anh zaii...</div>
+
+<table id="coinTable" style="display:none;">
+  <thead>
+    <tr>
+      <th data-key="symbol">Coin ▲▼</th>
+      <th data-key="priceChangePercent">Giá hiện tại ▲▼</th>
+      <th data-key="volume">Vol 24h ▲▼</th>
+      <th data-key="winRate">Win Rate(%) ▲▼</th>
+      <th>TP (Giá)</th>
+      <th>SL (Giá)</th>
+      <th>% Lãi</th>
+      <th>% Lỗ</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+let dataTable = [];
+let position = 'long';
+let sortKey = 'symbol';
+let sortAsc = true;
+//sleep
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+// Format volume hiển thị (K, M, B)
+function formatVol(n) {
+  if(n > 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if(n > 1e6) return (n / 1e6).toFixed(2) + 'M';
+  if(n > 1e3) return (n / 1e3).toFixed(2) + 'K';
+  return n.toFixed(2);
+}
+
+// Lấy dữ liệu 24h từ API, lọc top 50 USDT theo volume
+async function fetch24hrAndRenderIncremental() {
+  try {
+    const resp = await fetch('http://localhost:3001/api/ticker');
+    if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+    const d = await resp.json();
+
+    if (!Array.isArray(d)) {
+      document.getElementById('loading').textContent = 'Lỗi: Dữ liệu API không đúng định dạng.';
+      return;
+    }
+
+    const filtered = d.filter(i => i.symbol.endsWith('USDT'))
+                      .sort((a,b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+                      .slice(0, 120);  // Lấy 120 cặp coin
+
+    const tbody = document.querySelector('#coinTable tbody');
+    tbody.innerHTML = '';
+    dataTable = [];
+
+    for (const item of filtered) {
+      const symbol = item.symbol;
+      const entryPrice = parseFloat(item.lastPrice).toFixed(6);
+      const volume = formatVol(parseFloat(item.quoteVolume));
+      const priceChangePercent = parseFloat(item.priceChangePercent).toFixed(2);
+      const isUp = priceChangePercent >= 0;
+
+      const rowData = { 
+        symbol, 
+        entryPrice, 
+        volume,
+        priceChangePercent,
+        priceChangeClass: isUp ? 'price-change-up' : 'price-change-down'
+      };
+      dataTable.push(rowData);
+
+      const tr = document.createElement('tr');
+      tr.dataset.symbol = symbol;
+      tr.innerHTML = `
+        <td>${symbol}</td>
+        <td class="col-entryPrice">
+          ${entryPrice} 
+          <span class="${rowData.priceChangeClass}">
+            ${isUp ? '+' : ''}${priceChangePercent}%
+          </span>
+        </td>
+        <td>${volume}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+      `;
+      tbody.appendChild(tr);
+      applyFilterToRow(tr);
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('coinTable').style.display = 'table';
+
+  } catch (error) {
+    console.error('Lỗi fetch dữ liệu:', error);
+    document.getElementById('loading').textContent = 'Lỗi tải dữ liệu: ' + error.message;
+  }
+}
+
+function applyFilterToRow(tr) {
+  const filter = document.getElementById('searchInput').value.trim().toUpperCase();
+  if (!filter) {
+    tr.style.display = '';
+  } else {
+    const sym = tr.dataset.symbol.toUpperCase();
+    tr.style.display = sym.includes(filter) ? '' : 'none';
+  }
+}
+
+// Lấy nến từ API (1h hoặc 4h)
+async function fetchKlines(symbol, interval = '1h', limit = 100) {
+  const response = await fetch(`http://localhost:3100/api/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+  if (!response.ok) throw new Error(`Lỗi lấy nến ${symbol} ${interval}: ${response.status}`);
+  return await response.json();
+}
+
+// Phát hiện mô hình nến đơn giản
+function detectCandlePattern(open, high, low, close) {
+  const body = Math.abs(close - open);
+  const candleSize = high - low;
+  const upperShadow = high - Math.max(open, close);
+  const lowerShadow = Math.min(open, close) - low;
+
+  const bodyRatio = body / candleSize;
+
+  if (bodyRatio < 0.1) {
+    return 'Doji';
+  } else if (lowerShadow > body * 2 && upperShadow < body) {
+    return 'Hammer';
+  } else if (upperShadow > body * 2 && lowerShadow < body) {
+    return 'ShootingStar';
+  } else {
+    return 'None';
+  }
+}
+//phát hiện mô hình nến nâng cao
+function detectAdvancedCandlePattern(klines) {
+  if (klines.length < 3) return 'None';
+
+  const [c1, c2, c3] = klines.slice(-3).map(c => ({
+    open: parseFloat(c[1]),
+    high: parseFloat(c[2]),
+    low: parseFloat(c[3]),
+    close: parseFloat(c[4])
+  }));
+
+  const isBullishEngulfing =
+    c2.close < c2.open &&
+    c3.close > c3.open &&
+    c3.close > c2.open &&
+    c3.open < c2.close;
+
+  const isBearishEngulfing =
+    c2.close > c2.open &&
+    c3.close < c3.open &&
+    c3.open > c2.close &&
+    c3.close < c2.open;
+
+  const isMorningStar =
+    c1.close < c1.open &&
+    Math.abs(c2.close - c2.open) < Math.abs(c1.close - c1.open) * 0.3 &&
+    c3.close > c3.open &&
+    c3.close > ((c1.open + c1.close) / 2);
+
+  const isEveningStar =
+    c1.close > c1.open &&
+    Math.abs(c2.close - c2.open) < Math.abs(c1.close - c1.open) * 0.3 &&
+    c3.close < c3.open &&
+    c3.close < ((c1.open + c1.close) / 2);
+
+  if (isBullishEngulfing) return 'BullishEngulfing';
+  if (isBearishEngulfing) return 'BearishEngulfing';
+  if (isMorningStar) return 'MorningStar';
+  if (isEveningStar) return 'EveningStar';
+
+  return 'None';
+}
+
+function evaluateRSIImpact(rsi, prevRsi, position) {
+  let impact = 0;
+  const delta = rsi - prevRsi;
+  const isRising = delta > 0;
+  const isFalling = delta < 0;
+
+  const isOverbought = rsi >= 70;
+  const isOversold = rsi <= 30;
+
+  const isExtremelyOverbought = rsi >= 80;
+  const isExtremelyOversold = rsi <= 20;
+
+  if (position === 'long') {
+    if (isOversold) impact += 4;
+    if (isExtremelyOversold) impact += 2;
+    if (rsi > 50 && isRising) impact += 2;
+    if (rsi > 70 && isRising) impact -= 5;
+    if (isOverbought && isFalling) impact -= 6;
+    if (rsi < 40 && isFalling) impact -= 3;
+  } else if (position === 'short') {
+    if (isOverbought) impact += 4;
+    if (isExtremelyOverbought) impact += 2;
+    if (rsi < 50 && isFalling) impact += 2;
+    if (rsi < 30 && isFalling) impact -= 5;
+    if (isOversold && isRising) impact -= 6;
+    if (rsi > 60 && isRising) impact -= 3;
+  }
+
+  if (rsi >= 45 && rsi <= 55 && Math.abs(delta) < 2) {
+    impact -= 3;
+  }
+
+  return impact;
+}
+
+function calcTech(closes, position, lastCandle, volumes = [], klines = []) {
+  const rsiArr = window.RSI.calculate({ period: 14, values: closes });
+  const rsi = rsiArr[rsiArr.length - 1];
+  const prevRsi = rsiArr[rsiArr.length - 2] || rsi;
+
+  const ema20Arr = window.EMA.calculate({ period: 20, values: closes });
+  const ema50Arr = window.EMA.calculate({ period: 50, values: closes });
+  const ema20 = ema20Arr.pop();
+  const ema50 = ema50Arr.pop();
+
+  const macdInput = {
+    values: closes,
+    fastPeriod: 12,
+    slowPeriod: 26,
+    signalPeriod: 9,
+    SimpleMAOscillator: false,
+    SimpleMASignal: false,
+  };
+  const macdArr = window.MACD.calculate(macdInput);
+  const macdLast = macdArr.length ? macdArr.pop() : null;
+  const macdPrev = macdArr.length ? macdArr[macdArr.length - 1] : null;
+
+  const bbInput = {
+    period: 20,
+    values: closes,
+    stdDev: 2,
+  };
+  const bbArr = window.BollingerBands.calculate(bbInput);
+  const bbLast = bbArr.at(-1);
+  const bbPrev = bbArr.at(-2);
+
+  const lastClose = closes.at(-1);
+
+  let winRate = 50;
+
+  if (volumes.length > 20) {
+    const recentVol = volumes.at(-1);
+    const avgVol = volumes.slice(-21, -1).reduce((a, b) => a + b, 0) / 20;
+    if (recentVol > avgVol * 1.5) winRate += 10;
+    else if (recentVol < avgVol * 0.5) winRate -= 5;
+  }
+
+  if (ema20 > ema50) winRate += (position === 'long') ? 10 : -10;
+  else if (ema20 < ema50) winRate += (position === 'short') ? 10 : -10;
+
+  if (macdLast && macdPrev) {
+    const macdHistNow = macdLast.histogram;
+    const macdHistPrev = macdPrev.histogram;
+    const macdLine = macdLast.MACD;
+    const signalLine = macdLast.signal;
+
+    if (macdHistNow > 0 && macdHistNow > macdHistPrev) winRate += 8;
+    else if (macdHistNow > 0 && macdHistNow < macdHistPrev) winRate += 4;
+    else if (macdHistNow < 0 && macdHistNow < macdHistPrev) winRate -= 8;
+    else if (macdHistNow < 0 && macdHistNow > macdHistPrev) winRate -= 4;
+
+    if (macdLine > signalLine && macdHistNow > 0) winRate += 6;
+    else if (macdLine < signalLine && macdHistNow < 0) winRate -= 6;
+  }
+
+  if (bbLast && bbPrev) {
+    const bbWidth = bbLast.upper - bbLast.lower;
+    const prevWidth = bbPrev.upper - bbPrev.lower;
+    const widthChange = (bbWidth - prevWidth) / prevWidth;
+    const slope = bbLast.upper - bbPrev.upper;
+
+    const upperThreshold = bbLast.upper * 1.05;
+    const extremeUpper = bbLast.upper * 1.15;
+    const lowerThreshold = bbLast.lower * 0.95;
+    const extremeLower = bbLast.lower * 0.85;
+
+    const isExpanding = widthChange > 0.1;
+    const isContracting = widthChange < -0.1;
+
+    if (isExpanding) {
+      if (position === 'long' && slope < 0) winRate -= 15;
+      else if (position === 'short' && slope > 0) winRate -= 15;
+      else winRate += 5;
+    }
+
+    if (isContracting) winRate -= 5;
+
+    if (position === 'long') {
+      if (lastClose <= upperThreshold && lastClose >= bbLast.upper) winRate += 10;
+      else if (lastClose > extremeUpper) winRate -= 10;
+    } else if (position === 'short') {
+      if (lastClose >= lowerThreshold && lastClose <= bbLast.lower) winRate += 10;
+      else if (lastClose < extremeLower) winRate -= 10;
+    }
+  }
+
+  const rsiImpact = evaluateRSIImpact(rsi, prevRsi, position);
+  winRate += rsiImpact;
+
+  if (lastCandle) {
+    const open = parseFloat(lastCandle[1]);
+    const high = parseFloat(lastCandle[2]);
+    const low = parseFloat(lastCandle[3]);
+    const close = parseFloat(lastCandle[4]);
+    const pattern = detectCandlePattern(open, high, low, close);
+
+    if (position === 'long') {
+      if (pattern === 'Hammer') winRate += 10;
+      if (pattern === 'ShootingStar') winRate -= 10;
+    } else if (position === 'short') {
+      if (pattern === 'ShootingStar') winRate += 10;
+      if (pattern === 'Hammer') winRate -= 10;
+    }
+
+    if (pattern === 'Doji') winRate -= 5;
+  }
+  // 📌 Mô hình nến nâng cao (Engulfing, Star)
+  if (klines.length >= 3) {
+    const advPattern = detectAdvancedCandlePattern(klines);
+
+    if (position === 'long') {
+      if (advPattern === 'BullishEngulfing') winRate += 12;
+      if (advPattern === 'BearishEngulfing') winRate -= 12;
+      if (advPattern === 'MorningStar') winRate += 15;
+      if (advPattern === 'EveningStar') winRate -= 15;
+    } else if (position === 'short') {
+      if (advPattern === 'BearishEngulfing') winRate += 12;
+      if (advPattern === 'BullishEngulfing') winRate -= 12;
+      if (advPattern === 'EveningStar') winRate += 15;
+      if (advPattern === 'MorningStar') winRate -= 15;
+    }
+  }
+
+  return {
+    ema20,
+    ema50,
+    macdHistogram: macdLast ? macdLast.histogram : null,
+    bbLower: bbLast ? bbLast.lower : null,
+    bbUpper: bbLast ? bbLast.upper : null,
+    winRate: Math.max(10, Math.min(90, winRate)),
+  };
+}
+
+async function calcTechMultiTimeframes(symbol, position) {
+  const [klines15m, klines1h, klines4h, klines1d] = await Promise.all([
+    fetchKlines(symbol, '15m'),
+    fetchKlines(symbol, '1h'),
+    fetchKlines(symbol, '4h'),
+    fetchKlines(symbol, '1d')
+  ]);
+
+  const closes15m = klines15m.map(k => parseFloat(k[4]));
+  const closes1h = klines1h.map(k => parseFloat(k[4]));
+  const closes4h = klines4h.map(k => parseFloat(k[4]));
+  const closes1d = klines1d.map(k => parseFloat(k[4]));
+  const volumes1h = klines1h.map(k => parseFloat(k[5]));
+
+  const tech15m = calcTech(closes15m, position, klines15m.at(-1));
+  const tech1h = calcTech(closes1h, position, klines1h.at(-1), volumes1h);
+  const tech4h = calcTech(closes4h, position, klines4h.at(-1));
+  const tech1d = calcTech(closes1d, position, klines1d.at(-1));
+
+  let winRate = (
+    tech15m.winRate * 0.30 +
+    tech1h.winRate * 0.40 +
+    tech4h.winRate * 0.20 +
+    tech1d.winRate * 0.10
+  );
+
+  return { winRate: Math.max(10, Math.min(90, winRate)) };
+}
+
+
+
+// Điều chỉnh winRate nếu SL vượt 5% (đòn bẩy x20)
+function adjustWinRateForLeverage(winRate, slPercent, maxLossPercent=5) {
+  if (slPercent > maxLossPercent) {
+    return Math.max(10, winRate * (maxLossPercent / slPercent));
+  }
+  return winRate;
+}
+function findSupportResistance(closes) {
+  const supports = [];
+  const resistances = [];
+
+  for (let i = 2; i < closes.length - 2; i++) {
+    const prev2 = closes[i - 2], prev1 = closes[i - 1];
+    const curr = closes[i];
+    const next1 = closes[i + 1], next2 = closes[i + 2];
+
+    // Tìm đáy cục bộ (support)
+    if (curr < prev1 && curr < prev2 && curr < next1 && curr < next2) {
+      supports.push(curr);
+    }
+
+    // Tìm đỉnh cục bộ (resistance)
+    if (curr > prev1 && curr > prev2 && curr > next1 && curr > next2) {
+      resistances.push(curr);
+    }
+  }
+
+  return { supports, resistances };
+}
+function findNearestLevel(currentPrice, levels, type = 'above') {
+  const sorted = levels.slice().sort((a, b) => a - b);
+  if (type === 'above') {
+    return sorted.find(lvl => lvl > currentPrice);
+  } else {
+    return [...sorted].reverse().find(lvl => lvl < currentPrice);
+  }
+}
+// hỗ trợ kháng cự
+function findNearestSupportResistance(klines, entryPrice, position) {
+  const highs = klines.map(k => parseFloat(k[2]));
+  const lows = klines.map(k => parseFloat(k[3]));
+
+  let support = null, resistance = null;
+
+  for (let i = klines.length - 20; i >= 0; i--) {
+    const high = highs[i];
+    const low = lows[i];
+
+    if (high > entryPrice && (!resistance || Math.abs(high - entryPrice) < Math.abs(resistance - entryPrice))) {
+      resistance = high;
+    }
+
+    if (low < entryPrice && (!support || Math.abs(low - entryPrice) < Math.abs(support - entryPrice))) {
+      support = low;
+    }
+  }
+
+  return { support, resistance };
+}
+
+// Cập nhật dữ liệu kỹ thuật cho 1 dòng
+async function updateRowWithTech(symbol) {
+  const rowData = dataTable.find(d => d.symbol === symbol);
+  if (!rowData) return;
+  const tbody = document.querySelector('#coinTable tbody');
+  const tr = [...tbody.children].find(tr => tr.dataset.symbol === symbol);
+  if (!tr) return;
+
+  for (let i = 3; i <= 7; i++) tr.cells[i].innerHTML = '<span class="loading-cell">Đang tính...</span>';
+
+  try {
+    const tech = await calcTechMultiTimeframes(symbol, position);
+    const ep = parseFloat(rowData.entryPrice);
+    let wr = tech.winRate;
+    const maxLossPercent = 5;
+
+    let TP, SL, profitPercent, lossPercent;
+
+    const klines = await fetchKlines(symbol, '1h');
+    const { support, resistance } = findNearestSupportResistance(klines, ep, position);
+
+    if (position === 'long') {
+      TP = resistance || ep * 1.05; // +5%
+      SL = support || ep * 0.98;    // -2%
+      profitPercent = 5;
+      lossPercent = 2;
+    } else {
+      TP = support || ep * 0.95;     // -5%
+      SL = resistance || ep * 1.02;  // +2%
+      profitPercent = 5;
+      lossPercent = 2;
+    }
+
+    // Điều chỉnh winRate nếu SL quá lớn
+    wr = adjustWinRateForLeverage(wr, lossPercent, maxLossPercent);
+
+    rowData.winRate = wr.toFixed(2);
+    rowData.TP = TP.toFixed(6);
+    rowData.SL = SL.toFixed(6);
+    rowData.profitPercent = profitPercent.toFixed(2);
+    rowData.lossPercent = lossPercent.toFixed(2);
+
+    // Gán màu theo winRate
+    const wrFloat = parseFloat(rowData.winRate);
+    let className = '';
+    if (wrFloat > 70) className = 'winrate-high';
+    else if (wrFloat >= 50) className = 'winrate-mid';
+    else className = 'winrate-low';
+
+    tr.cells[3].innerHTML = `<span class="${className}">${rowData.winRate}%</span>`;
+await sleep(150); // Hiển thị mượt từng bước
+
+tr.cells[4].textContent = rowData.TP;
+await sleep(150);
+
+tr.cells[5].textContent = rowData.SL;
+await sleep(150);
+
+tr.cells[6].textContent = rowData.profitPercent + '%';
+await sleep(150);
+
+tr.cells[7].textContent = rowData.lossPercent + '%';
+
+  } catch (e) {
+    console.error('Lỗi khi lấy dữ liệu nến', e);
+    for (let i = 3; i <= 7; i++) tr.cells[i].textContent = 'Lỗi';
+  }
+}
+
+// Cập nhật kỹ thuật cho tất cả dòng tuần tự (bạn có thể sửa để chạy song song nếu cần)
+const CONCURRENT_LIMIT = 10;
+
+async function updateAllRows() {
+  let index = 0;
+
+  async function worker() {
+    while (index < dataTable.length) {
+      const currentIndex = index++;
+      const symbol = dataTable[currentIndex].symbol;
+      await updateRowWithTech(symbol); // Cập nhật ngay khi xong
+    }
+  }
+
+  // Tạo pool CONCURRENT_LIMIT worker chạy song song
+  await Promise.all(Array.from({ length: CONCURRENT_LIMIT }, () => worker()));
+}
+
+function applyFilter() {
+  const tbody = document.querySelector('#coinTable tbody');
+  tbody.querySelectorAll('tr').forEach(tr => applyFilterToRow(tr));
+}
+
+function sortTable(key) {
+  sortAsc = (sortKey === key) ? !sortAsc : true;
+  sortKey = key;
+
+  dataTable.sort((a, b) => {
+    let x = a[key], y = b[key];
+    if (key === 'symbol') {
+      x = x.toUpperCase();
+      y = y.toUpperCase();
+      return sortAsc ? (x > y ? 1 : -1) : (y > x ? 1 : -1);
+    }
+    if (typeof x === 'string') x = parseFloat(x.replace(/[^\d.-]/g, '')) || 0;
+    if (typeof y === 'string') y = parseFloat(y.replace(/[^\d.-]/g, '')) || 0;
+    return sortAsc ? x - y : y - x;
+  });
+
+  const tbody = document.querySelector('#coinTable tbody');
+  tbody.innerHTML = '';
+  for (const d of dataTable) {
+    // Gán màu winRate khi render bảng
+    let winRateHtml = '';
+    if (d.winRate !== undefined) {
+      const wr = parseFloat(d.winRate);
+      let className = '';
+      if (wr > 70) className = 'winrate-high';
+      else if (wr >= 50) className = 'winrate-mid';
+      else className = 'winrate-low';
+      winRateHtml = `<span class="${className}">${d.winRate}%</span>`;
+    }
+
+    // Giá hiện tại kèm % tăng giảm màu
+    const priceChangeHtml = `
+      ${d.entryPrice} 
+      <span class="${d.priceChangeClass}">
+        ${(parseFloat(d.priceChangePercent) >= 0 ? '+' : '') + d.priceChangePercent}%
+      </span>
+    `;
+
+    const tr = document.createElement('tr');
+    tr.dataset.symbol = d.symbol;
+    tr.innerHTML = `
+      <td>${d.symbol}</td>
+      <td class="col-entryPrice">${priceChangeHtml}</td>
+      <td>${d.volume}</td>
+      <td>${winRateHtml}</td>
+      <td>${d.TP || ''}</td>
+      <td>${d.SL || ''}</td>
+      <td>${d.profitPercent || ''}</td>
+      <td>${d.lossPercent || ''}</td>
+    `;
+    tbody.appendChild(tr);
+    applyFilterToRow(tr);
+  }
+}
+
+// Hàm khởi tạo
+async function init() {
+  document.getElementById('loading').style.display = 'block';
+  await fetch24hrAndRenderIncremental();
+
+  document.getElementById('positionSelect').onchange = async () => {
+    position = document.getElementById('positionSelect').value;
+    dataTable.forEach(d => {
+      delete d.winRate;
+      delete d.TP;
+      delete d.SL;
+      delete d.profitPercent;
+      delete d.lossPercent;
+    });
+    sortTable(sortKey);
+    await updateAllRows();
+  };
+
+  document.getElementById('searchInput').oninput = applyFilter;
+
+  document.querySelectorAll('th[data-key]').forEach(th => {
+    th.addEventListener('click', () => {
+      sortTable(th.getAttribute('data-key'));
+    });
+  });
+
+  await updateAllRows();
+
+  document.getElementById('loading').style.display = 'none';
+}
+
+init();
+
+</script>
+<script>
+const canvas = document.getElementById("candlestickOverlay");
+const ctx = canvas.getContext("2d");
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+canvas.width = width;
+canvas.height = height;
+
+const candleWidth = 6;
+const gap = 2;
+let totalCandles = Math.ceil(width / (candleWidth + gap)) + 10;
+
+let candles = [];
+let price = 100;
+
+function generateCandles() {
+  candles = [];
+  let lastClose = price;
+  for (let i = 0; i < totalCandles; i++) {
+    let open = lastClose;
+    let change = (Math.random() - 0.5) * 20; // biên độ dao động lớn hơn
+    let close = open + change;
+    let high = Math.max(open, close) + Math.random() * 5;
+    let low = Math.min(open, close) - Math.random() * 5;
+    candles.push({ open, close, high, low });
+    lastClose = close;
+  }
+}
+
+function getEMA(data, period, key) {
+  const k = 2 / (period + 1);
+  let ema = [];
+  let sum = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const val = data[i][key];
+    if (val === null || val === undefined) {
+      ema.push(null);
+      continue;
+    }
+    if (i < period) {
+      sum += val;
+      ema.push(null);
+    } else if (i === period) {
+      ema.push(sum / period);
+    } else {
+      ema.push(val * k + ema[i - 1] * (1 - k));
+    }
+  }
+  return ema;
+}
+
+function getBollingerBands(data, period = 20) {
+  let middle = [];
+  let upper = [];
+  let lower = [];
+
+  for (let i = 0; i < data.length; i++) {
+    if (i < period) {
+      middle.push(null);
+      upper.push(null);
+      lower.push(null);
+    } else {
+      let slice = data.slice(i - period, i);
+      let closes = slice.map(c => c.close);
+      let avg = closes.reduce((a, b) => a + b, 0) / period;
+      let stdDev = Math.sqrt(closes.map(c => Math.pow(c - avg, 2)).reduce((a, b) => a + b, 0) / period);
+
+      middle.push(avg);
+      upper.push(avg + 2 * stdDev);
+      lower.push(avg - 2 * stdDev);
+    }
+  }
+
+  return { middle, upper, lower };
+}
+
+function drawCandles(offsetX = 0) {
+  ctx.clearRect(0, 0, width, height);
+  ctx.save();
+  ctx.translate(-offsetX, 0);
+
+  // Tính min/max giá thực tế để scale
+  let minPrice = Math.min(...candles.map(c => c.low));
+  let maxPrice = Math.max(...candles.map(c => c.high));
+  if (maxPrice === minPrice) { maxPrice += 1; minPrice -= 1; }
+
+  const chartHeight = height * 0.7; // 70% chiều cao canvas cho nến + BB
+  const topPadding = (height - chartHeight) / 2;
+  const scale = chartHeight / (maxPrice - minPrice);
+
+  let x = width - (candleWidth + gap) * candles.length + offsetX;
+
+  // Vẽ Bollinger Bands
+  const bb = getBollingerBands(candles);
+  ctx.strokeStyle = "rgba(255,255,255,0.2)";
+  ctx.lineWidth = 1;
+
+  const drawBBLine = (arr) => {
+    ctx.beginPath();
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] === null) continue;
+      let px = x + i * (candleWidth + gap) + candleWidth / 2;
+      let py = topPadding + (maxPrice - arr[i]) * scale;
+      if (i === 0 || arr[i - 1] === null) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  };
+
+  drawBBLine(bb.middle);
+  drawBBLine(bb.upper);
+  drawBBLine(bb.lower);
+
+  // Vẽ nến
+  for (let i = 0; i < candles.length; i++) {
+    const c = candles[i];
+    let openY = topPadding + (maxPrice - c.open) * scale;
+    let closeY = topPadding + (maxPrice - c.close) * scale;
+    let highY = topPadding + (maxPrice - c.high) * scale;
+    let lowY = topPadding + (maxPrice - c.low) * scale;
+
+    let color = c.close >= c.open ? "#00ff00" : "#ff3333";
+
+    // Wick
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x + candleWidth / 2, highY);
+    ctx.lineTo(x + candleWidth / 2, lowY);
+    ctx.stroke();
+
+    // Body
+    ctx.fillStyle = color;
+    ctx.fillRect(x, Math.min(openY, closeY), candleWidth, Math.abs(openY - closeY));
+
+    x += candleWidth + gap;
+  }
+
+  ctx.restore();
+
+  // Vẽ MACD
+  drawMACD(candles);
+}
+
+function drawMACD(data) {
+  const ema12 = getEMA(data, 12, "close");
+  const ema26 = getEMA(data, 26, "close");
+
+  let macd = ema12.map((val, i) => (val !== null && ema26[i] !== null) ? val - ema26[i] : null);
+  let signal = getEMA(macd.map(val => ({ close: val || 0 })), 9, "close");
+  let hist = macd.map((val, i) => (val !== null && signal[i] !== null) ? val - signal[i] : null);
+
+  const macdHeight = 60; // chiều cao MACD
+  const macdTop = height - macdHeight - 70; // nâng MACD lên cao hơn chút
+
+  ctx.save();
+  ctx.translate(0, macdTop);
+  let x = width - (candleWidth + gap) * candles.length;
+
+  for (let i = 0; i < hist.length; i++) {
+    if (hist[i] === null) continue;
+    let barHeight = hist[i] * 10; // scale thanh histogram MACD
+    let y, heightBar;
+    if (barHeight >= 0) {
+      y = macdHeight / 2 - barHeight;
+      heightBar = barHeight;
+      ctx.fillStyle = "#00ccff"; // xanh cho dương
+    } else {
+      y = macdHeight / 2;
+      heightBar = -barHeight;
+      ctx.fillStyle = "#ff6699"; // đỏ cho âm
+    }
+    ctx.fillRect(x, y, candleWidth, heightBar);
+    x += candleWidth + gap;
+  }
+
+  // MACD line
+  ctx.beginPath();
+  x = width - (candleWidth + gap) * candles.length;
+  ctx.strokeStyle = "#00ffff";
+  for (let i = 0; i < macd.length; i++) {
+    if (macd[i] === null) continue;
+    let y = macdHeight / 2 - macd[i] * 10;
+    if (i === 0 || macd[i - 1] === null) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+    x += candleWidth + gap;
+  }
+  ctx.stroke();
+
+  // Signal line
+  ctx.beginPath();
+  x = width - (candleWidth + gap) * candles.length;
+  ctx.strokeStyle = "#ffcc00";
+  for (let i = 0; i < signal.length; i++) {
+    if (signal[i] === null) continue;
+    let y = macdHeight / 2 - signal[i] * 10;
+    if (i === 0 || signal[i - 1] === null) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+    x += candleWidth + gap;
+  }
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+let offsetX = 0;
+
+function animate() {
+  offsetX += 0.3;
+  if (offsetX >= candleWidth + gap) {
+    offsetX = 0;
+    candles.shift();
+    const last = candles[candles.length - 1];
+    const open = last.close;
+    const change = (Math.random() - 0.5) * 20; // biên độ lớn hơn
+    const close = open + change;
+    const high = Math.max(open, close) + Math.random() * 5;
+    const low = Math.min(open, close) - Math.random() * 5;
+    candles.push({ open, close, high, low });
+  }
+  drawCandles(offsetX);
+  requestAnimationFrame(animate);
+}
+
+generateCandles();
+animate();
+
+window.addEventListener("resize", () => {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  canvas.width = width;
+  canvas.height = height;
+  totalCandles = Math.ceil(width / (candleWidth + gap)) + 10;
+  generateCandles();
+});
+</script>
+
+</body>
+</html>
