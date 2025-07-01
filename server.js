@@ -20,6 +20,58 @@ if (!fs.existsSync(USERS_FILE)) {
   fs.writeFileSync(USERS_FILE, '[]');
 }
 
+// Middleware kiểm tra token JWT
+function authenticateToken(req, res, next) {
+  // Token có thể nằm ở header Authorization: Bearer <token>
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    // Nếu request chấp nhận html, redirect về login.html
+    if (req.accepts('html')) {
+      return res.redirect('/login.html');
+    } else {
+      return res.status(401).json({ error: 'Bạn chưa đăng nhập' });
+    }
+  }
+
+  jwt.verify(token, SECRET_KEY, (err, user) => {
+    if (err) {
+      if (req.accepts('html')) {
+        return res.redirect('/login.html');
+      } else {
+        return res.status(403).json({ error: 'Token không hợp lệ' });
+      }
+    }
+    req.user = user;
+    next();
+  });
+}
+
+// Danh sách đường dẫn không cần kiểm tra token
+const publicPaths = [
+  '/login.html',
+  '/register.html',
+  '/api/login',
+  '/api/register',
+  '/api/ticker',
+  '/api/klines'
+];
+
+// Áp dụng middleware kiểm tra token cho tất cả request
+app.use((req, res, next) => {
+  // Nếu request tới đường dẫn công khai, cho qua luôn
+  if (publicPaths.includes(req.path)) {
+    return next();
+  }
+  // Nếu request tới thư mục public nhưng không phải file HTML (ví dụ js, css), cho qua
+  if (req.path.startsWith('/static') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico)$/)) {
+    return next();
+  }
+  // Các trường hợp còn lại kiểm tra token
+  authenticateToken(req, res, next);
+});
+
 // Phục vụ static file trong thư mục public/
 app.use(express.static(path.join(__dirname, 'public')));
 
