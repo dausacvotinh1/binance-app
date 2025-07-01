@@ -105,20 +105,30 @@ app.post('/api/register', [
   body('password').isLength({ min: 6 })
 ], async (req, res) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  if (!errors.isEmpty()) {
+    console.log('Validation errors:', errors.array());
+    return res.status(400).json({ errors: errors.array() });
+  }
 
   const { username, password } = req.body;
   const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+  console.log('Users trước khi thêm:', users);
 
   if (users.find(u => u.username === username)) {
+    console.log('Username đã tồn tại:', username);
     return res.status(400).json({ error: 'Username đã tồn tại' });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
   users.push({ username, password: hashedPassword });
+  console.log('Users sau khi thêm:', users);
+
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  console.log('Ghi users.json thành công');
+
   res.json({ message: 'Đăng ký thành công' });
 });
+
 
 // Đăng nhập người dùng
 app.post('/api/login', async (req, res) => {
