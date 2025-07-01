@@ -62,9 +62,7 @@ const publicPaths = [
 
 // Áp dụng kiểm tra token cho các route cần bảo vệ
 app.use((req, res, next) => {
-  if (publicPaths.includes(req.path)) return next();
-  if (req.path.startsWith('/static') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico)$/)) return next();
-  authenticateToken(req, res, next);
+  next();
 });
 
 // Phục vụ file tĩnh trong thư mục public/
