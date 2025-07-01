@@ -9,8 +9,10 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const USERS_FILE = './users.json';
+const USERS_FILE = path.join(__dirname, 'users.json'); // ✅ Đường dẫn tuyệt đối
 const SECRET_KEY = process.env.SECRET_KEY || 'your-secret-key';
+
+console.log('📁 Ghi/đọc file tại:', USERS_FILE);
 
 app.use(cors());
 app.use(express.json());
@@ -18,16 +20,15 @@ app.use(express.json());
 // Tạo file users.json nếu chưa tồn tại
 if (!fs.existsSync(USERS_FILE)) {
   fs.writeFileSync(USERS_FILE, '[]');
+  console.log('📄 Đã tạo file users.json mới');
 }
 
 // Middleware kiểm tra token JWT
 function authenticateToken(req, res, next) {
-  // Token có thể nằm ở header Authorization: Bearer <token>
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    // Nếu request chấp nhận html, redirect về login.html
     if (req.accepts('html')) {
       return res.redirect('/login.html');
     } else {
@@ -48,7 +49,7 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// Danh sách đường dẫn không cần kiểm tra token
+// Danh sách đường dẫn không cần đăng nhập
 const publicPaths = [
   '/login.html',
   '/register.html',
@@ -58,34 +59,28 @@ const publicPaths = [
   '/api/klines'
 ];
 
-// Áp dụng middleware kiểm tra token cho tất cả request
+// Áp dụng kiểm tra token cho các route cần bảo vệ
 app.use((req, res, next) => {
-  // Nếu request tới đường dẫn công khai, cho qua luôn
-  if (publicPaths.includes(req.path)) {
-    return next();
-  }
-  // Nếu request tới thư mục public nhưng không phải file HTML (ví dụ js, css), cho qua
-  if (req.path.startsWith('/static') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico)$/)) {
-    return next();
-  }
-  // Các trường hợp còn lại kiểm tra token
+  if (publicPaths.includes(req.path)) return next();
+  if (req.path.startsWith('/static') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico)$/)) return next();
   authenticateToken(req, res, next);
 });
 
-// Phục vụ static file trong thư mục public/
+// Phục vụ file tĩnh trong thư mục public/
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Proxy API lấy ticker 24h từ Binance
+// ✅ API proxy lấy ticker
 app.get('/api/ticker', async (req, res) => {
   try {
     const response = await axios.get('https://fapi.binance.com/fapi/v1/ticker/24hr');
     res.json(response.data);
   } catch (error) {
+    console.error('Lỗi gọi ticker:', error.message);
     res.status(500).json({ error: 'Lỗi khi gọi API Binance' });
   }
 });
 
-// Proxy API lấy dữ liệu nến (klines) từ Binance
+// ✅ API proxy lấy klines
 app.get('/api/klines', async (req, res) => {
   const { symbol, interval = '1h', limit = 100 } = req.query;
   try {
@@ -94,43 +89,43 @@ app.get('/api/klines', async (req, res) => {
     });
     res.json(response.data);
   } catch (error) {
-    console.error('Lỗi proxy Binance:', error.message);
+    console.error('Lỗi gọi klines:', error.message);
     res.status(500).json({ error: 'Lỗi lấy dữ liệu từ Binance' });
   }
 });
 
-// Đăng ký người dùng mới
+// ✅ API đăng ký
 app.post('/api/register', [
   body('username').notEmpty(),
   body('password').isLength({ min: 6 })
 ], async (req, res) => {
+  console.log('📥 Nhận đăng ký:', req.body);
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log('Validation errors:', errors.array());
+    console.log('❌ Lỗi validate:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
   const { username, password } = req.body;
   const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-  console.log('Users trước khi thêm:', users);
+  console.log('📋 Trước khi thêm:', users);
 
   if (users.find(u => u.username === username)) {
-    console.log('Username đã tồn tại:', username);
+    console.log('⚠️ Username đã tồn tại:', username);
     return res.status(400).json({ error: 'Username đã tồn tại' });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
   users.push({ username, password: hashedPassword });
-  console.log('Users sau khi thêm:', users);
 
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-  console.log('Ghi users.json thành công');
+  console.log('✅ Đã ghi user vào file');
 
   res.json({ message: 'Đăng ký thành công' });
 });
 
-
-// Đăng nhập người dùng
+// ✅ API đăng nhập
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
@@ -145,6 +140,7 @@ app.post('/api/login', async (req, res) => {
   res.json({ message: 'Đăng nhập thành công', token });
 });
 
+// ✅ Khởi động server
 app.listen(PORT, () => {
-  console.log(`Server chạy tại http://localhost:${PORT}`);
+  console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
 });
