@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const axios = require('axios');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,7 +20,10 @@ if (!fs.existsSync(USERS_FILE)) {
   fs.writeFileSync(USERS_FILE, '[]');
 }
 
-// Proxy Binance
+// Phục vụ static file trong thư mục public/
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Proxy API lấy ticker 24h từ Binance
 app.get('/api/ticker', async (req, res) => {
   try {
     const response = await axios.get('https://fapi.binance.com/fapi/v1/ticker/24hr');
@@ -29,7 +33,21 @@ app.get('/api/ticker', async (req, res) => {
   }
 });
 
-// Đăng ký
+// Proxy API lấy dữ liệu nến (klines) từ Binance
+app.get('/api/klines', async (req, res) => {
+  const { symbol, interval = '1h', limit = 100 } = req.query;
+  try {
+    const response = await axios.get('https://fapi.binance.com/fapi/v1/klines', {
+      params: { symbol, interval, limit }
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('Lỗi proxy Binance:', error.message);
+    res.status(500).json({ error: 'Lỗi lấy dữ liệu từ Binance' });
+  }
+});
+
+// Đăng ký người dùng mới
 app.post('/api/register', [
   body('username').notEmpty(),
   body('password').isLength({ min: 6 })
@@ -50,7 +68,7 @@ app.post('/api/register', [
   res.json({ message: 'Đăng ký thành công' });
 });
 
-// Đăng nhập
+// Đăng nhập người dùng
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
